@@ -9,8 +9,11 @@ import {
   Title,
   Tooltip,
   Legend,
+  RadialLinearScale,
+  PointElement,
+  LineElement
 } from 'chart.js';
-import { Bar, Pie } from 'react-chartjs-2';
+import { Bar, Pie, Radar } from 'react-chartjs-2';
 import './app.css';
 
 // (for charting)
@@ -21,7 +24,10 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  RadialLinearScale,
+  PointElement,
+  LineElement
 );
 
 const API_URL = 'http://localhost:8000';
@@ -82,9 +88,10 @@ function App() {
     setText('');
     setResult(null);
     setError('');
+    setStats(null); // clear all charts
   };
 
-  // chart 1: Prediction Distribution (Pie Chart)
+  // Chart 1: Prediction Distribution (Pie Chart)
   const pieChartData = stats ? {
     labels: ['Fake News', 'Real News'],
     datasets: [
@@ -115,6 +122,26 @@ function App() {
       },
     ],
   } : null;
+
+  //Chart 3: recent Predictions Confidence (Radar Chart)
+  const radarChartData = stats ? {
+    labels: ['Random Forest', 'Logistics Regression', 'KNN'],
+    datasets: [
+      {
+        label: 'Average Confidence (%)',
+        data: [
+          (stats.model_confidence?.rf * 100).toFixed(1) || 0,
+          (stats.model_confidence?.lr * 100).toFixed(1) || 0,
+          (stats.model_confidence?.knn * 100).toFixed(1) || 0,
+        ], 
+        backgroundColor: 'rgba(52, 152, 219, 0.2)',
+        borderColor: '#3498db',
+        pointBackgroundColor: '#2980b9',
+        borderWidth: 2,
+      }
+    ]
+  } : null;
+
 
   const chartOptions = {
     responsive: true,
@@ -213,40 +240,70 @@ function App() {
           </div>
         )}
 
-        {/* visualizations */}
-        {stats && stats.total_predictions > 0 && (
-          <div className="charts-container">
-            <div className="card chart-card">
-              <h3>Prediction Distribution</h3>
-              <div className="chart-wrapper">
-                {pieChartData && <Pie data={pieChartData} options={chartOptions} />}
+          {/* visualizations */}
+          {stats && stats.total_predictions > 0 && (
+            <div className="charts-container">
+              {/* Chart 1: Pie */}
+              <div className="card chart-card">
+                <h3>Prediction Distribution</h3>
+                <div className="chart-wrapper">
+                  {pieChartData && <Pie data={pieChartData} options={chartOptions} />}
+                </div>
+                <div className="stats-summary">
+                  <p>Total Predictions: <strong>{stats.total_predictions}</strong></p>
+                  <p>Average Confidence: <strong>{(stats.average_confidence * 100).toFixed(1)}%</strong></p>
+                </div>
               </div>
-              <div className="stats-summary">
-                <p>Total Predictions: <strong>{stats.total_predictions}</strong></p>
-                <p>Average Confidence: <strong>{(stats.average_confidence * 100).toFixed(1)}%</strong></p>
-              </div>
-            </div>
 
-            <div className="card chart-card">
-              <h3>Recent Predictions Confidence</h3>
-              <div className="chart-wrapper">
-                {barChartData && <Bar data={barChartData} options={{
-                  ...chartOptions,
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      max: 100,
-                      title: {
-                        display: true,
-                        text: 'Confidence %'
-                      }
-                    }
-                  }
-                }} />}
+              {/* Chart 2: Bar */}
+              <div className="card chart-card">
+                <h3>Recent Predictions Confidence</h3>
+                <div className="chart-wrapper">
+                  {barChartData && (
+                    <Bar
+                      data={barChartData}
+                      options={{
+                        ...chartOptions,
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                              display: true,
+                              text: 'Confidence %'
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Chart 3: Radar */}
+              <div className="card chart-card">
+                <h3>Model Confidence Comparison</h3>
+                <div className="chart-wrapper">
+                  {radarChartData && (
+                    <Radar
+                      data={radarChartData}
+                      options={{
+                        ...chartOptions,
+                        scales: {
+                          r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { stepSize: 20 },
+                            pointLabels: { font: { size: 14 } },
+                          },
+                        },
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
 
       <footer className="App-footer">
