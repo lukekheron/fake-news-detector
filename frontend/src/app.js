@@ -13,7 +13,7 @@ import {
   PointElement,
   LineElement
 } from 'chart.js';
-import { Bar, Pie, Radar } from 'react-chartjs-2';
+import { Bar, Pie, Scatter } from 'react-chartjs-2';
 import './app.css';
 
 // (for charting)
@@ -88,8 +88,12 @@ function App() {
     setText('');
     setResult(null);
     setError('');
-    setStats(null); // clear all charts
   };
+
+  const handleClearGraphs = () => {
+    setStats(null); //clears the stats + predictions
+    setResult(null); //clear results
+  }
 
   // Chart 1: Prediction Distribution (Pie Chart)
   const pieChartData = stats ? {
@@ -123,21 +127,20 @@ function App() {
     ],
   } : null;
 
-  //Chart 3: recent Predictions Confidence (Radar Chart)
-  const radarChartData = stats ? {
-    labels: ['Random Forest', 'Logistics Regression', 'KNN'],
+  // Chart 3: Dot Plot of Recent Predictions Confidence
+  const dotChartData = stats?.recent_predictions ? {
     datasets: [
       {
-        label: 'Average Confidence (%)',
-        data: [
-          (stats.model_confidence?.rf * 100).toFixed(1) || 0,
-          (stats.model_confidence?.lr * 100).toFixed(1) || 0,
-          (stats.model_confidence?.knn * 100).toFixed(1) || 0,
-        ], 
-        backgroundColor: 'rgba(52, 152, 219, 0.2)',
+        label: 'Confidence Level (%)',
+        data: stats.recent_predictions.map((p, idx) => ({
+          x: idx + 1,
+          y: Math.round(p.confidence * 100 * 10) / 10  // rounds to 1 decimal as number
+        })),
+        backgroundColor: stats.recent_predictions.map(p => 
+          p.prediction === 'Fake News' ? '#e74c3c' : '#2ecc71'
+        ),
         borderColor: '#3498db',
-        pointBackgroundColor: '#2980b9',
-        borderWidth: 2,
+        pointRadius: 6
       }
     ]
   } : null;
@@ -198,7 +201,10 @@ function App() {
                 {loading ? 'Analyzing...' : 'Analyze Text'}
               </button>
               <button type="button" onClick={handleClear} className="btn btn-secondary">
-                Clear
+                Clear Text
+              </button>
+              <button type="button" onClick={handleClearGraphs} className="btn btn-warning">
+                Clear Graphs
               </button>
             </div>
           </form>
@@ -280,26 +286,11 @@ function App() {
                 </div>
               </div>
 
-              {/* Chart 3: Radar */}
+              {/* Chart 3: Dot Plot */}
               <div className="card chart-card">
-                <h3>Model Confidence Comparison</h3>
+                <h3>Recent Predictions Confidence</h3>
                 <div className="chart-wrapper">
-                  {radarChartData && (
-                    <Radar
-                      data={radarChartData}
-                      options={{
-                        ...chartOptions,
-                        scales: {
-                          r: {
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: { stepSize: 20 },
-                            pointLabels: { font: { size: 14 } },
-                          },
-                        },
-                      }}
-                    />
-                  )}
+                  {dotChartData && <Scatter data={dotChartData} options={{ responsive: true }}/>}
                 </div>
               </div>
             </div>
